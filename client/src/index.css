@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,700;1,9..144,900&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --ink:    #0A1A12;
+  --ink2:   #1C3628;
+  --ink3:   #2E5242;
+  --leaf:   #1A7A52;
+  --leaf2:  #25A36E;
+  --leaf3:  #3DD68C;
+  --gold:   #E8A020;
+  --gold2:  #F5C55A;
+  --gold3:  #FDE9A8;
+  --cream:  #FAF6ED;
+  --cream2: #F2EBD6;
+  --cream3: #E8DFC0;
+  --white:  #FFFFFF;
+  --muted:  #527060;
+  --border: #D4E6DA;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: 'Cabinet Grotesk', sans-serif; }
+a      { text-decoration: none; }
+
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: var(--cream); }
+::-webkit-scrollbar-thumb  { background: var(--cream3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }

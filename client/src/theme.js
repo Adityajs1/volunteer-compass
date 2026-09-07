@@ -1,0 +1,17 @@
+export const T = {
+  ink:    "#0A1A12",
+  ink2:   "#1C3628",
+  ink3:   "#2E5242",
+  leaf:   "#1A7A52",
+  leaf2:  "#25A36E",
+  leaf3:  "#3DD68C",
+  gold:   "#E8A020",
+  gold2:  "#F5C55A",
+  gold3:  "#FDE9A8",
+  cream:  "#FAF6ED",
+  cream2: "#F2EBD6",
+  cream3: "#E8DFC0",
+  white:  "#FFFFFF",
+  muted:  "#527060",
+  border: "#D4E6DA",
+};

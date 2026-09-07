@@ -1,0 +1,270 @@
+// ─────────────────────────────────────────────────────────────
+// Prisma Schema — Volunteer Compass
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────
+
+enum Role {
+  VOLUNTEER
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RsvpStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+}
+
+enum MatchStatus {
+  SUGGESTED
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  EVENT_REMINDER
+  MATCH_SUGGESTION
+  RSVP_CONFIRMED
+  RSVP_CANCELLED
+  EVENT_UPDATED
+  EVENT_CANCELLED
+}
+
+// ─── User ─────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  firebaseUid     String?   @unique
+  email           String    @unique
+  passwordHash    String?
+  name            String
+  avatarUrl       String?
+  bio             String?
+  role            Role      @default(VOLUNTEER)
+  isVerified      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+
+  // Location
+  city            String?
+  state           String?
+  country         String?
+  latitude        Float?
+  longitude       Float?
+
+  // Volunteer-specific
+  skills          UserSkill[]
+  availability    Availability[]
+  rsvps           Rsvp[]
+  matches         Match[]
+  notifications   Notification[]
+
+  // Organizer-specific
+  organizedEvents Event[]   @relation("OrganizerEvents")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ─── Skill ────────────────────────────────────────────────────
+
+model Skill {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  category  String?
+  users     UserSkill[]
+  events    EventSkill[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  userId    String
+  skillId   String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@map("user_skills")
+}
+
+// ─── Availability ─────────────────────────────────────────────
+
+model Availability {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int       // 0 = Sunday, 6 = Saturday
+  startTime   String    // "HH:MM" format
+  endTime     String    // "HH:MM" format
+
+  @@map("availability")
+}
+
+// ─── Event ────────────────────────────────────────────────────
+
+model Event {
+  id              String        @id @default(cuid())
+  title           String
+  description     String
+  imageUrl        String?
+  status          EventStatus   @default(DRAFT)
+
+  // Organizer
+  organizerId     String
+  organizer       User          @relation("OrganizerEvents", fields: [organizerId], references: [id])
+
+  // Location
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  latitude        Float?
+  longitude       Float?
+  isVirtual       Boolean       @default(false)
+  meetingUrl      String?
+
+  // Schedule
+  startDate       DateTime
+  endDate         DateTime
+  isRecurring     Boolean       @default(false)
+  rrule           String?       // RFC 5545 RRULE string for recurring events
+
+  // Capacity
+  maxVolunteers   Int?
+  minVolunteers   Int?
+
+  // Relations
+  skills          EventSkill[]
+  rsvps           Rsvp[]
+  matches         Match[]
+  categories      EventCategory[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([organizerId])
+  @@index([status])
+  @@index([startDate])
+  @@index([city])
+  @@map("events")
+}
+
+model EventSkill {
+  eventId   String
+  skillId   String
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, skillId])
+  @@map("event_skills")
+}
+
+// ─── Category ─────────────────────────────────────────────────
+
+model Category {
+  id      String          @id @default(cuid())
+  name    String          @unique
+  events  EventCategory[]
+
+  @@map("categories")
+}
+
+model EventCategory {
+  eventId     String
+  categoryId  String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, categoryId])
+  @@map("event_categories")
+}
+
+// ─── RSVP ─────────────────────────────────────────────────────
+
+model Rsvp {
+  id          String      @id @default(cuid())
+  userId      String
+  eventId     String
+  status      RsvpStatus  @default(PENDING)
+  note        String?
+  checkedIn   Boolean     @default(false)
+  checkedInAt DateTime?
+  hoursVolunteered Float?
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+  @@map("rsvps")
+}
+
+// ─── Matching ─────────────────────────────────────────────────
+
+model Match {
+  id          String      @id @default(cuid())
+  userId      String
+  eventId     String
+  score       Float       // Match score 0.0 - 1.0
+  status      MatchStatus @default(SUGGESTED)
+  reasons     String[]    // e.g. ["skill:teaching", "location:nearby"]
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([score])
+  @@map("matches")
+}
+
+// ─── Notification ─────────────────────────────────────────────
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean           @default(false)
+  metadata  Json?             // Extra context (eventId, matchId, etc.)
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime          @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
